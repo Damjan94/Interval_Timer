@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/linear_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="5sp"
+        android:text="@string/notification_interval_seconds"
+        android:textAlignment="center"
+        android:textSize="30sp" />
+
+    <Spinner
+        android:id="@+id/notification_interval_spinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="5sp"
+        android:spinnerMode="dialog" />
+
+    <TextView
+        android:id="@+id/iteration_number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="5sp"
+        android:text="@string/number_of_iterations"
+        android:textSize="30sp" />
+
+    <EditText
+        android:id="@+id/seconds_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:hint="@string/seconds"
+        android:importantForAutofill="no"
+        android:inputType="number"
+        android:padding="5sp"
+        android:textSize="30sp" />
+
+    <androidx.core.widget.ContentLoadingProgressBar
+        android:id="@+id/progress_bar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:indeterminate="false"
+        android:padding="5sp" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/start_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="5sp"
+        android:text="@string/start" />
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/timer_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="15sp"
+        android:scaleType="fitCenter"
+        app:srcCompat="@drawable/ic_av_timer_black_24dp" />
+</LinearLayout>

@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Interval Timer</string>
+    <string name="start">Start</string>
+    <string name="seconds">Seconds</string>
+    <string name="cancel">Cancel</string>
+    <string name="number_of_iterations">Number of iterations</string>
+    <string name="main_activity_null">Main activity reference is null</string>
+    <string name="notification_interval_seconds">Notification interval(seconds)</string>
+    <string name="warning_dnd">Please disable Do not Disturb.</string>
+    <string name="ok">Ok</string>
+    <string name="background_color">Background color</string>
+    <string name="button_color">Button color</string>
+    <string name="text_color">Text color</string>
+    <string name="gamma">Gamma</string>
+    <string name="alpha">Alpha</string>
+</resources>
