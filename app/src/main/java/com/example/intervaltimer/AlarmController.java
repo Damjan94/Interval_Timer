@@ -2,6 +2,7 @@ package com.example.intervaltimer;
 
 import android.app.AlarmManager;
 import android.content.SharedPreferences;
+import android.media.AudioAttributes;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.os.CountDownTimer;
@@ -21,7 +22,8 @@ public class AlarmController implements AlarmManager.OnAlarmListener, IRingtoneR
     private static ActivityAndAlarm activityAndAlarm = null;
     private final RingtoneManager m_ringtoneManager;
     private final Handler m_handler;
-    private final IRingtoneSetter m_setter;
+
+    private final float m_volume;
     private String m_saveLoadKey;
     private boolean m_isActive;
     private long m_millisUntilAlarm;
@@ -37,7 +39,7 @@ public class AlarmController implements AlarmManager.OnAlarmListener, IRingtoneR
      *                         ma main activity to be called periodically to update the gui and to play a notification
      * @param millisUntilAlarm after calling start, the alarm will sound every millisUntilAlarm
      */
-    AlarmController(@NonNull ActivityAndAlarm aaa, @NonNull RingtoneManager ringtoneManager, long millisUntilAlarm, boolean updateGui, String saveLoadKey, IRingtoneSetter setter) {
+    AlarmController(@NonNull ActivityAndAlarm aaa, @NonNull RingtoneManager ringtoneManager, long millisUntilAlarm, boolean updateGui, String saveLoadKey, float volume) {
         activityAndAlarm = aaa;
         m_millisUntilAlarm = millisUntilAlarm;
         m_ringtoneManager = ringtoneManager;
@@ -46,7 +48,7 @@ public class AlarmController implements AlarmManager.OnAlarmListener, IRingtoneR
         m_handlerThread.start();
         m_handler = new Handler(m_handlerThread.getLooper());
         m_saveLoadKey = saveLoadKey;
-        m_setter = setter;
+        m_volume = volume;
     }
 
     void start(long millisUntilAlarm) {
@@ -118,16 +120,14 @@ public class AlarmController implements AlarmManager.OnAlarmListener, IRingtoneR
 
     @Override
     public void onAlarm() {
-        if (m_ringtone.isPlaying()) {
-            //m_ringtone.stop();
-        }
         m_ringtone.play();
         m_numberOfIterations++;
         if (m_updateGui && (activityAndAlarm.m_ma != null)) {
             activityAndAlarm.m_ma.finishedIteration(m_numberOfIterations);
         }
-        if (m_isActive)
+        if (m_isActive) {
             startAlarm(System.currentTimeMillis() + m_millisUntilAlarm);
+        }
     }
 
 
@@ -136,7 +136,7 @@ public class AlarmController implements AlarmManager.OnAlarmListener, IRingtoneR
         m_millisUntilAlarm = preferences.getLong(m_saveLoadKey, 0);
         int id = preferences.getInt(m_saveLoadKey + RINGTONE_ID, 1);
         Ringtone r = m_ringtoneManager.getRingtone(id);
-        m_setter.setRingtone(r, id);
+        this.ringtoneSelected(r, id);
     }
 
     void save(SharedPreferences.Editor preferencesEditor) {
@@ -154,6 +154,11 @@ public class AlarmController implements AlarmManager.OnAlarmListener, IRingtoneR
 
     @Override
     public void ringtoneSelected(@NonNull Ringtone ringtone, int ringtoneId) {
+        AudioAttributes aa = new AudioAttributes.Builder().
+                setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED).
+                setUsage(AudioAttributes.USAGE_NOTIFICATION_COMMUNICATION_INSTANT).build();
+        ringtone.setAudioAttributes(aa);
+        ringtone.setVolume(m_volume);
         m_ringtone = ringtone;
         m_ringtoneId = ringtoneId;
     }

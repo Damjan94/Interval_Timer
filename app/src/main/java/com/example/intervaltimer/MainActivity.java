@@ -7,8 +7,6 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Color;
-import android.media.AudioAttributes;
-import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -26,8 +24,8 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -76,32 +74,14 @@ public class MainActivity extends AppCompatActivity {
             getSupportFragmentManager().beginTransaction().add(fragmentColorPicker, "Color picker").commit();
             return true; // we're consuming this click
         });
-
-        //functions used for setting up the ringtones for specific alarms
-        final IRingtoneSetter notificationRingtone = (ringtone, ringtoneId) -> {
-            AudioAttributes aa = new AudioAttributes.Builder().
-                    setUsage(AudioAttributes.USAGE_NOTIFICATION).build();
-            ringtone.setAudioAttributes(aa);
-            ringtone.setVolume(0.2f);
-            m_intervalAlarm.ringtoneSelected(ringtone, ringtoneId);
-        };
-
-        final IRingtoneSetter longCycleFinished = (ringtone, ringtoneId) -> {
-            AudioAttributes aa = new AudioAttributes.Builder().
-                    setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED).
-                    setUsage(AudioAttributes.USAGE_NOTIFICATION_COMMUNICATION_INSTANT).build();
-            ringtone.setAudioAttributes(aa);
-            m_finishedAlarm.ringtoneSelected(ringtone, ringtoneId);
-        };
-
         // set up the alarm and ring tones
         ActivityAndAlarm aaa = new ActivityAndAlarm(this, (AlarmManager) getSystemService(ALARM_SERVICE));
         RingtoneManager manager = new RingtoneManager(this);
 
-        m_finishedAlarm = new AlarmController(aaa, manager, 0, true, AlarmController.FINISHED_KEY, longCycleFinished);
+        m_finishedAlarm = new AlarmController(aaa, manager, 0, true, AlarmController.FINISHED_KEY, (float) 1.0);
 
 
-        m_intervalAlarm = new AlarmController(aaa, manager, 0, false, AlarmController.INTERVAL_KEY, notificationRingtone);
+        m_intervalAlarm = new AlarmController(aaa, manager, 0, false, AlarmController.INTERVAL_KEY, (float) 0.2);
 
         IntervalSpinnerAdapter adapter = new IntervalSpinnerAdapter(m_myTheme);
         m_notificationInterval.setAdapter(adapter);
@@ -109,25 +89,24 @@ public class MainActivity extends AppCompatActivity {
         m_notificationInterval.setOnItemSelectedListener(adapter);
 
 
-        setFragmentNotificationPicker(m_notificationInterval, notificationRingtone);
+        setFragmentNotificationPicker(m_notificationInterval, m_intervalAlarm);
 
-        setFragmentNotificationPicker(seconds, longCycleFinished);
+        setFragmentNotificationPicker(seconds, m_finishedAlarm);
     }
 
-    private void setFragmentNotificationPicker(View v, IRingtoneSetter setter) {
+    private void setFragmentNotificationPicker(View v, IRingtoneReceiver receiver) {
         v.setOnLongClickListener((view) -> {
             RingtoneManager manager = new RingtoneManager(this);
             manager.setType(RingtoneManager.TYPE_NOTIFICATION);
             Cursor c = manager.getCursor();
 
-            Map<String, Integer> ringtones = new HashMap<>();
+            Map<String, Integer> ringtones = new TreeMap<>();
 
             do {
-                Ringtone ring = RingtoneManager.getRingtone(getApplicationContext(), manager.getRingtoneUri(c.getPosition()));
-                ringtones.put(ring.getTitle(this), c.getPosition());
-                c.moveToNext();
-            } while (!c.isLast());
-            final FragmentNotificationPicker fragmentNotificationPicker = new FragmentNotificationPicker(m_myTheme, manager, ringtones, setter);
+                String title = c.getString(RingtoneManager.TITLE_COLUMN_INDEX);
+                ringtones.put(title, c.getPosition());
+            } while (c.moveToNext());
+            final FragmentNotificationPicker fragmentNotificationPicker = new FragmentNotificationPicker(m_myTheme, manager, ringtones, receiver);
             getSupportFragmentManager().beginTransaction().add(fragmentNotificationPicker, "Notification picker").commit();
             return true; // we're consuming this click
         });

@@ -22,16 +22,16 @@ public class FragmentNotificationPicker extends DialogFragment {
     private final DynamicTheme m_theme;
     private final RingtoneManager m_ringtoneManager;
     private final Map<String, Integer> m_ringtones;
-    private final IRingtoneSetter m_setter;
+    private final IRingtoneReceiver m_receiver;
     ViewGroup m_container;
     private Ringtone m_selectedRingtone;
     private int m_selectedRingtoneId;
 
-    FragmentNotificationPicker(DynamicTheme theme, RingtoneManager manager, Map<String, Integer> ringtones, IRingtoneSetter setter) {
+    FragmentNotificationPicker(DynamicTheme theme, RingtoneManager manager, Map<String, Integer> ringtones, IRingtoneReceiver receiver) {
         m_theme = theme;
         m_ringtoneManager = manager;
         m_ringtones = ringtones;
-        m_setter = setter;
+        m_receiver = receiver;
     }
 
     @Override
@@ -76,6 +76,6 @@ public class FragmentNotificationPicker extends DialogFragment {
     public void onStop() {
         super.onStop();
         Log.e("Selected ringtone ", m_selectedRingtone.toString());
-        m_setter.setRingtone(m_selectedRingtone, m_selectedRingtoneId);
+        m_receiver.ringtoneSelected(m_selectedRingtone, m_selectedRingtoneId);
     }
 }
