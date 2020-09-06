@@ -1,9 +1,7 @@
 package com.example.intervaltimer;
 
-import android.media.Ringtone;
-
-import androidx.annotation.NonNull;
+import android.net.Uri;
 
 interface IRingtoneReceiver {
-    void ringtoneSelected(@NonNull Ringtone ringtone, int ringtoneId);
+    void ringtoneSelected(Uri ringtoneId, String ringtoneType);
 }

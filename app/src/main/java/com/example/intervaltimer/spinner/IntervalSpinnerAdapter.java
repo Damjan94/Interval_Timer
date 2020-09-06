@@ -1,4 +1,4 @@
-package com.example.intervaltimer;
+package com.example.intervaltimer.spinner;
 
 import android.database.DataSetObserver;
 import android.util.TypedValue;
@@ -8,15 +8,20 @@ import android.widget.AdapterView;
 import android.widget.SpinnerAdapter;
 import android.widget.TextView;
 
+import com.example.intervaltimer.AlarmInfo;
+import com.example.intervaltimer.DynamicTheme;
+
 public class IntervalSpinnerAdapter implements SpinnerAdapter, AdapterView.OnItemSelectedListener {
 
-    static final String[] INTERVAL_TIME = {"---", "30", "60", "90", "180"};
+    public static final String[] INTERVAL_TIME = {"---", "30", "60", "90", "180"};
 
     private final DynamicTheme m_theme;
+    private final AlarmInfo m_alarmInfo;
     private View m_lastView = null;
 
-    IntervalSpinnerAdapter(DynamicTheme myTheme) {
+    public IntervalSpinnerAdapter(DynamicTheme myTheme, AlarmInfo alarmInfo) {
         m_theme = myTheme;
+        m_alarmInfo = alarmInfo;
     }
 
 
@@ -96,6 +101,13 @@ public class IntervalSpinnerAdapter implements SpinnerAdapter, AdapterView.OnIte
             m_theme.remove(parent);
             m_lastView = view;
             m_theme.apply(parent);
+        }
+
+        try {
+            int shortInterval = Integer.parseInt(INTERVAL_TIME[position]);
+            m_alarmInfo.setShortInterval(shortInterval * 1000);
+        } catch (NumberFormatException ignored) {
+
         }
     }
 

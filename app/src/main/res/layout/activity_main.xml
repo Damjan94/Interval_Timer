@@ -17,7 +17,7 @@
         android:textAlignment="center"
         android:textSize="30sp" />
 
-    <Spinner
+    <com.example.intervaltimer.spinner.IntervalSpinner
         android:id="@+id/notification_interval_spinner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

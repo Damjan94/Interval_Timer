@@ -1,28 +1,28 @@
 package com.example.intervaltimer;
 
-import android.app.AlarmManager;
-import android.app.AlertDialog;
-import android.app.Dialog;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.graphics.Color;
 import android.media.RingtoneManager;
 import android.os.Bundle;
-import android.provider.Settings;
-import android.util.Log;
-import android.util.TypedValue;
+import android.os.IBinder;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.intervaltimer.spinner.IntervalSpinner;
+import com.example.intervaltimer.spinner.IntervalSpinnerAdapter;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -33,11 +33,16 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private EditText seconds;
     private Button start;
-    private AlarmController m_finishedAlarm;
-    private AlarmController m_intervalAlarm;
-    private Spinner m_notificationInterval;
+
+    private IntervalSpinner m_notificationInterval;
 
     private DynamicTheme m_myTheme;
+    private AlarmInfo m_myAlarmInfo;
+
+    private AlarmService.MyBinder m_binder;
+    private ServiceConnection connection;
+
+    private boolean m_isRunning = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,25 +53,35 @@ public class MainActivity extends AppCompatActivity {
         seconds = findViewById(R.id.seconds_text);
         progressBar = findViewById(R.id.progress_bar);
         m_notificationInterval = findViewById(R.id.notification_interval_spinner);
-        start.setOnClickListener(new StartOnClick(this));
+        start.setOnClickListener((view) -> {
+
+            Intent alarmServiceIntent = new Intent(MainActivity.this, AlarmService.class);
+
+            if (m_binder.isRunning()) {
+                m_binder.stopCountdown();
+                Thread t = new Thread(() -> {
+                    try {
+                        Thread.sleep(500);//wait for the service to stop...
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    startService(alarmServiceIntent);
+                    bindService(alarmServiceIntent, connection, 0);//bind to it, but don't start countdown until the start button is pressed
+                });
+                t.start();
+                start.setEnabled(false);
+            } else {
+                m_binder.startCountdown();
+            }
+        });
+
         progressBar.setMin(0);
 
-
-        DynamicTheme.Colors colors = new DynamicTheme.Colors();
-
-        TypedValue typedValue = new TypedValue();
-        getTheme().resolveAttribute(R.attr.colorPrimaryDark, typedValue, true);
-        colors.background = Color.valueOf(typedValue.data);
-
-        getTheme().resolveAttribute(R.attr.colorPrimaryDark, typedValue, true);
-        colors.foreground = Color.valueOf(typedValue.data);
-
-        getTheme().resolveAttribute(R.attr.colorPrimary, typedValue, true);
-        colors.text = Color.valueOf(typedValue.data);
-
-        m_myTheme = new DynamicTheme(colors, getWindow());
-
+        m_myTheme = new DynamicTheme(this, getWindow());
         m_myTheme.apply((ViewGroup) findViewById(R.id.linear_layout).getParent());
+
+        m_myAlarmInfo = new AlarmInfo();
+
         ImageView timerImage = findViewById(R.id.timer_image);
 
         timerImage.setOnLongClickListener((view) -> {
@@ -74,27 +89,43 @@ public class MainActivity extends AppCompatActivity {
             getSupportFragmentManager().beginTransaction().add(fragmentColorPicker, "Color picker").commit();
             return true; // we're consuming this click
         });
-        // set up the alarm and ring tones
-        ActivityAndAlarm aaa = new ActivityAndAlarm(this, (AlarmManager) getSystemService(ALARM_SERVICE));
-        RingtoneManager manager = new RingtoneManager(this);
 
-        m_finishedAlarm = new AlarmController(aaa, manager, 0, true, AlarmController.FINISHED_KEY, (float) 1.0);
-
-
-        m_intervalAlarm = new AlarmController(aaa, manager, 0, false, AlarmController.INTERVAL_KEY, (float) 0.2);
-
-        IntervalSpinnerAdapter adapter = new IntervalSpinnerAdapter(m_myTheme);
+        IntervalSpinnerAdapter adapter = new IntervalSpinnerAdapter(m_myTheme, m_myAlarmInfo);
         m_notificationInterval.setAdapter(adapter);
         m_notificationInterval.setSelection(0);
         m_notificationInterval.setOnItemSelectedListener(adapter);
 
+        seconds.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 
-        setFragmentNotificationPicker(m_notificationInterval, m_intervalAlarm);
+            }
 
-        setFragmentNotificationPicker(seconds, m_finishedAlarm);
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                int longInterval = -1;
+                try {
+                    longInterval = Integer.parseInt(s.toString());
+                } catch (NumberFormatException e) {
+                    seconds.requestFocus();
+                }
+                if (longInterval > 0) {
+                    m_myAlarmInfo.setLongInterval(longInterval * 1000);
+                }
+            }
+        });
+
+        setFragmentNotificationPicker(m_notificationInterval, m_myAlarmInfo, AlarmInfo.RINGTONE_SHORT_INTERVAL_KEY);
+
+        setFragmentNotificationPicker(seconds, m_myAlarmInfo, AlarmInfo.RINGTONE_LONG_INTERVAL_KEY);
     }
 
-    private void setFragmentNotificationPicker(View v, IRingtoneReceiver receiver) {
+    private void setFragmentNotificationPicker(View v, IRingtoneReceiver receiver, String ringtoneType) {
         v.setOnLongClickListener((view) -> {
             RingtoneManager manager = new RingtoneManager(this);
             manager.setType(RingtoneManager.TYPE_NOTIFICATION);
@@ -106,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
                 String title = c.getString(RingtoneManager.TITLE_COLUMN_INDEX);
                 ringtones.put(title, c.getPosition());
             } while (c.moveToNext());
-            final FragmentNotificationPicker fragmentNotificationPicker = new FragmentNotificationPicker(m_myTheme, manager, ringtones, receiver);
+            final FragmentNotificationPicker fragmentNotificationPicker = new FragmentNotificationPicker(m_myTheme, manager, ringtones, receiver, ringtoneType);
             getSupportFragmentManager().beginTransaction().add(fragmentNotificationPicker, "Notification picker").commit();
             return true; // we're consuming this click
         });
@@ -116,18 +147,33 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        m_finishedAlarm.addActivity(this);
-        m_intervalAlarm.addActivity(this);
         SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
-        int selection = 0;
-
-        m_finishedAlarm.load(preferences);
-        m_intervalAlarm.load(preferences);
+        m_myAlarmInfo.load(preferences);
         m_myTheme.load(preferences);
 
-        seconds.setText(String.valueOf(m_finishedAlarm.getMillis() / 1000));
+        Intent alarmServiceIntent = new Intent(MainActivity.this, AlarmService.class);
+        startService(alarmServiceIntent);//start the service, so it doesn't get killed if we lave the activity
+        connection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                m_binder = (AlarmService.MyBinder) service;
+
+                m_binder.setActivity(MainActivity.this);
+                start.setEnabled(true);
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                m_binder = null;
+
+            }
+        };
+        bindService(alarmServiceIntent, connection, 0);//bind to it, but don't start countdown until the start button is pressed
+
+        seconds.setText(String.valueOf(m_myAlarmInfo.getLongInterval() / 1000));
         //loop trough the options of our adapter and set the loaded option to the closest option available
-        int interval = (int) (m_intervalAlarm.getMillis() / 1000);
+        int interval = m_myAlarmInfo.getShortInterval() / 1000;
+        int selection = 0;
         for (int i = 1; i < IntervalSpinnerAdapter.INTERVAL_TIME.length; i++) {//we skip the first element, it should be "---"
             if (Integer.parseInt(IntervalSpinnerAdapter.INTERVAL_TIME[i]) == interval) {
                 selection = i;
@@ -140,14 +186,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        m_finishedAlarm.removeActivity();
-        m_intervalAlarm.removeActivity();
+        if (m_binder != null) {
+            m_binder.setActivity(null);
+        }
+
 
         SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor sharedPreferencesEditor = preferences.edit();
-        m_finishedAlarm.save(sharedPreferencesEditor);
-        m_intervalAlarm.save(sharedPreferencesEditor);
         m_myTheme.save(sharedPreferencesEditor);
+        m_myAlarmInfo.save(sharedPreferencesEditor);
         sharedPreferencesEditor.apply();
 
     }
@@ -155,41 +202,45 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        m_finishedAlarm.stop();
-        m_finishedAlarm.stopThreads();
-        m_intervalAlarm.stop();
-        m_intervalAlarm.stopThreads();
+
+        if (!m_binder.isRunning()) {
+            Intent alarmServiceIntent = new Intent(this, AlarmService.class);
+            stopService(alarmServiceIntent);
+        }
+        unbindService(connection);
+        connection = null;
     }
 
-    private void stopTimers() {
-        m_finishedAlarm.stop();
-        m_intervalAlarm.stop();
-        stopCountdown();
-    }
 
-    private void stopCountdown() {
-        iterationCount.setText(R.string.number_of_iterations);
-        reset();
-    }
-
-    private void reset() {
-        progressBar.setProgress(progressBar.getMax());//as we're counting down, make the progress bar "empty" itself
-        start.setText(R.string.start);
-        seconds.setEnabled(true);
-        seconds.setText(String.valueOf(m_finishedAlarm.getMillis() / 1000));
-        m_notificationInterval.setEnabled(true);
-    }
-
-    private void start() {
-        progressBar.setMax((int) m_finishedAlarm.getMillis() / 1000);
-        start.setText(R.string.cancel);
-        seconds.clearFocus();
-        seconds.setEnabled(false);
-        m_notificationInterval.setEnabled(false);//technically it could be always enabled, but I'm too lazy to code for that
+    public void stopCountdown(int intervalTime) {
+        final String intervalTimeStr = String.valueOf(intervalTime / 1000);
+        runOnUiThread(() -> {
+            iterationCount.setText(R.string.number_of_iterations);
+            progressBar.setProgress(progressBar.getMax());//as we're counting down, make the progress bar "empty" itself
+            start.setText(R.string.start);
+            seconds.setEnabled(true);
+            seconds.setText(intervalTimeStr);
+            m_notificationInterval.setEnabled(true);
+        });
 
     }
 
-    void update(int secondsUntilFinished, String secondsUntilFinishedString) {
+    public AlarmInfo getAlarmInfo() {
+        return m_myAlarmInfo;
+    }
+
+    public void startCountdown(int intervalTime) {
+        runOnUiThread(() -> {
+            progressBar.setMax(intervalTime / 1000);
+            start.setText(R.string.cancel);
+            seconds.clearFocus();
+            seconds.setEnabled(false);
+            m_notificationInterval.setEnabled(false);//technically it could be always enabled, but I'm too lazy to code for that
+        });
+    }
+
+    void update(int secondsUntilFinished) {
+        final String secondsUntilFinishedString = String.valueOf(secondsUntilFinished);
         runOnUiThread(() -> {
             progressBar.setProgress(secondsUntilFinished);
             seconds.setText(secondsUntilFinishedString);
@@ -198,62 +249,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void finishedIteration(int numberOfIterations) {
+        final String str = String.valueOf(numberOfIterations);
         runOnUiThread(() -> {
-            iterationCount.setText(String.valueOf(numberOfIterations));
+            iterationCount.setText(str);
         });
-    }
-
-    private class StartOnClick implements OnClickListener {
-
-        private MainActivity m_mainActivity;
-
-        StartOnClick(MainActivity m) {
-            m_mainActivity = m;
-        }
-
-        @Override
-        public void onClick(View v) {
-            if (m_finishedAlarm.isActive()) {
-                stopTimers();
-                return;
-            }
-
-            /*
-            Do not Disturb values
-            0 - If DnD is off.
-            1 - If DnD is on - Priority Only
-            2 - If DnD is on - Total Silence
-            3 - If DnD is on - Alarms Only
-             */
-            int doNotDisturbStatus;
-            try {
-                doNotDisturbStatus = Settings.Global.getInt(getContentResolver(), "zen_mode");
-            } catch (Settings.SettingNotFoundException e) {
-                doNotDisturbStatus = 0;//we couldn't get the DnD status, so just assume it's off
-                Log.w("IntervalTimer", "Couldn't get the Do not Disturb status.");//notify the user
-            }
-            if (doNotDisturbStatus != 0) {
-                Dialog alert = new AlertDialog.Builder(m_mainActivity).setMessage(R.string.warning_dnd)
-                        .setPositiveButton(R.string.ok, (dialog, which) -> stopTimers())
-                        .setNegativeButton(R.string.cancel, null)
-                        .create();
-                alert.show();
-            }
-            long countdown;
-            try {
-                countdown = Integer.parseInt(seconds.getText().toString()) * 1000;
-            } catch (NumberFormatException ex) {
-                seconds.requestFocus();
-                return;
-            }
-
-            String selectedTime = (String) m_notificationInterval.getSelectedItem();
-            if (!selectedTime.equals(IntervalSpinnerAdapter.INTERVAL_TIME[0])) {
-                int intervalTime = Integer.parseInt(selectedTime) * 1000;
-                m_intervalAlarm.start(intervalTime);
-            }
-            m_finishedAlarm.start(countdown);
-            start();
-        }
     }
 }

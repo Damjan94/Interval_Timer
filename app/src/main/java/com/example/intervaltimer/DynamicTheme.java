@@ -2,7 +2,9 @@ package com.example.intervaltimer;
 
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
+import android.content.res.Resources;
 import android.graphics.Color;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
@@ -19,7 +21,7 @@ import java.util.Map;
 
 import top.defaults.colorpicker.ColorPickerView;
 
-class DynamicTheme implements IColorChanged {
+public class DynamicTheme implements IColorChanged {
 
     private static final String BACKGROUND_COLOR_KEY = "background_color";
     private static final String TEXT_COLOR_KEY = "text_color";
@@ -30,11 +32,23 @@ class DynamicTheme implements IColorChanged {
 
     private HashMap<ViewParent, LinkedList<View>> m_viewMap;
 
-    DynamicTheme(Colors defaultColors, Window window) {
+    DynamicTheme(MainActivity activity, Window window) {
 
         m_viewMap = new HashMap<>();
 
-        m_colors = defaultColors;
+        m_colors = new DynamicTheme.Colors();
+
+        TypedValue typedValue = new TypedValue();
+        Resources.Theme theme = activity.getTheme();
+        theme.resolveAttribute(R.attr.colorPrimaryDark, typedValue, true);
+        m_colors.background = Color.valueOf(typedValue.data);
+
+        theme.resolveAttribute(R.attr.colorPrimaryDark, typedValue, true);
+        m_colors.foreground = Color.valueOf(typedValue.data);
+
+        theme.resolveAttribute(R.attr.colorPrimary, typedValue, true);
+        m_colors.text = Color.valueOf(typedValue.data);
+
         m_window = window;
     }
 
@@ -56,7 +70,7 @@ class DynamicTheme implements IColorChanged {
         }
     }
 
-    void apply(ViewGroup container) {
+    public void apply(ViewGroup container) {
         if (container == null) {
             return;
         }
@@ -72,7 +86,7 @@ class DynamicTheme implements IColorChanged {
         colorize();
     }
 
-    void remove(View view) {
+    public void remove(View view) {
         if (view == null) {
             return;
         }

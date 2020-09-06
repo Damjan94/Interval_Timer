@@ -2,8 +2,8 @@ package com.example.intervaltimer;
 
 import android.media.Ringtone;
 import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,15 +23,16 @@ public class FragmentNotificationPicker extends DialogFragment {
     private final RingtoneManager m_ringtoneManager;
     private final Map<String, Integer> m_ringtones;
     private final IRingtoneReceiver m_receiver;
+    private final String m_ringtoneType;
     ViewGroup m_container;
-    private Ringtone m_selectedRingtone;
-    private int m_selectedRingtoneId;
+    private Uri m_selectedRingtoneId;
 
-    FragmentNotificationPicker(DynamicTheme theme, RingtoneManager manager, Map<String, Integer> ringtones, IRingtoneReceiver receiver) {
+    FragmentNotificationPicker(DynamicTheme theme, RingtoneManager manager, Map<String, Integer> ringtones, IRingtoneReceiver receiver, String ringtoneType) {
         m_theme = theme;
         m_ringtoneManager = manager;
         m_ringtones = ringtones;
         m_receiver = receiver;
+        m_ringtoneType = ringtoneType;
     }
 
     @Override
@@ -50,13 +51,12 @@ public class FragmentNotificationPicker extends DialogFragment {
                     String rName = ((RadioButton) (v)).getText().toString();
                     Integer i = m_ringtones.get(rName);
                     if (i == null) {
-                        m_selectedRingtone = null;
                         return;
                     }
-                    m_selectedRingtone = m_ringtoneManager.getRingtone(i);
-                    m_selectedRingtoneId = i;
-                    if (m_selectedRingtone != null) {
-                        m_selectedRingtone.play();
+                    Ringtone selectedRingtone = m_ringtoneManager.getRingtone(i);
+                    m_selectedRingtoneId = m_ringtoneManager.getRingtoneUri(i);
+                    if (selectedRingtone != null) {
+                        selectedRingtone.play();
                     }
                 }
             });
@@ -75,7 +75,6 @@ public class FragmentNotificationPicker extends DialogFragment {
     @Override
     public void onStop() {
         super.onStop();
-        Log.e("Selected ringtone ", m_selectedRingtone.toString());
-        m_receiver.ringtoneSelected(m_selectedRingtone, m_selectedRingtoneId);
+        m_receiver.ringtoneSelected(m_selectedRingtoneId, m_ringtoneType);
     }
 }
