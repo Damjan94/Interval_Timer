@@ -42,8 +42,6 @@ public class MainActivity extends AppCompatActivity {
     private AlarmService.MyBinder m_binder;
     private ServiceConnection connection;
 
-    private boolean m_isRunning = false;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -65,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    startService(alarmServiceIntent);
+                    startForegroundService(alarmServiceIntent);
                     bindService(alarmServiceIntent, connection, 0);//bind to it, but don't start countdown until the start button is pressed
                 });
                 t.start();
@@ -152,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
         m_myTheme.load(preferences);
 
         Intent alarmServiceIntent = new Intent(MainActivity.this, AlarmService.class);
-        startService(alarmServiceIntent);//start the service, so it doesn't get killed if we lave the activity
+        startForegroundService(alarmServiceIntent);//start the service, so it doesn't get killed if we lave the activity
         connection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {

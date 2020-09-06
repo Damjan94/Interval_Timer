@@ -1,5 +1,7 @@
 package com.example.intervaltimer;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
 import android.media.AudioAttributes;
@@ -10,6 +12,7 @@ import android.os.IBinder;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
 
 import java.util.ArrayList;
 
@@ -20,6 +23,7 @@ public class AlarmService extends Service {
     private final RingtoneManager m_ringtoneManager = new RingtoneManager(this);
     ArrayList<ElapsedTimeCheck> m_checks = null;
     private volatile boolean m_isRunning = false;
+    private boolean m_notificationPosted = false;
     private Ringtone m_shortRingtone = null;
     private Ringtone m_longRingtone = null;
     private AlarmInfo m_alarmInfo = null;
@@ -28,9 +32,14 @@ public class AlarmService extends Service {
         while (m_isRunning) {
             long nowTime = System.currentTimeMillis();
             long sleepTime = Long.MAX_VALUE;
-
+            int i = 0;
+            if (m_activity == null) {
+                i = 1;//no need to check the gui update, if the activity isn't available...
+            }
             synchronized (THREAD_LOCK) {
-                for (ElapsedTimeCheck ec : m_checks) {
+
+                for (; i < m_checks.size(); i++) {
+                    ElapsedTimeCheck ec = m_checks.get(i);
                     sleepTime = Math.min(Math.max(0, ec.check(nowTime)), sleepTime);
                 }
             }
@@ -58,6 +67,16 @@ public class AlarmService extends Service {
 
     @Override
     public int onStartCommand(Intent i, int flags, int startId) {
+        if (m_notificationPosted == false) {
+            final String NOTIFICATION_ID = "Interval timer notification";
+            NotificationChannel ch = new NotificationChannel(NOTIFICATION_ID, "Interval timer", NotificationManager.IMPORTANCE_HIGH);
+            ch.setDescription("The timer is running...");
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(ch);
+            NotificationCompat.Builder b = new NotificationCompat.Builder(this, NOTIFICATION_ID);
+            startForeground(123, b.build());
+            m_notificationPosted = true;
+        }
         return START_NOT_STICKY;
     }
 
