@@ -240,10 +240,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void update(int secondsUntilFinished) {
-        final String secondsUntilFinishedString = String.valueOf(secondsUntilFinished);
         runOnUiThread(() -> {
-            progressBar.setProgress(secondsUntilFinished);
-            seconds.setText(secondsUntilFinishedString);
+            progressBar.setProgress(progressBar.getMax() - secondsUntilFinished);
+            seconds.setText(String.valueOf(progressBar.getMax() - secondsUntilFinished));
         });
 
     }
