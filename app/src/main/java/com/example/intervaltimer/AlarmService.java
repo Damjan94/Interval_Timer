@@ -9,6 +9,7 @@ import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.os.Binder;
 import android.os.IBinder;
+import android.os.PowerManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -29,6 +30,11 @@ public class AlarmService extends Service {
     private AlarmInfo m_alarmInfo = null;
     private MainActivity m_activity = null;
     private Thread m_thread = new Thread(() -> {
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                "IntervalTimer::CountdownLock");
+
+        wakeLock.acquire();
         while (m_isRunning) {
             long nowTime = System.currentTimeMillis();
             long sleepTime = Long.MAX_VALUE;
@@ -53,6 +59,7 @@ public class AlarmService extends Service {
         if (m_activity != null) {
             m_activity.stopCountdown(m_checks.get(2).m_intervalTime);
         }
+        wakeLock.release();
         stopSelf();
     });
 
