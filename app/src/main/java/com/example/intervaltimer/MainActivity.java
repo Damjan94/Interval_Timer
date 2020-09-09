@@ -41,7 +41,9 @@ public class MainActivity extends AppCompatActivity {
 
     private AlarmService.MyBinder m_binder;
     private ServiceConnection connection;
+    private Intent m_alarmServiceIntent;
 
+    private boolean m_didWeStartTheServiceRecently = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,26 +54,34 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progress_bar);
         m_notificationInterval = findViewById(R.id.notification_interval_spinner);
         start.setOnClickListener((view) -> {
-
-            Intent alarmServiceIntent = new Intent(MainActivity.this, AlarmService.class);
-
-            if (m_binder.isRunning()) {
+            if (m_binder == null) {
+                m_didWeStartTheServiceRecently = true;
+                startForegroundService(m_alarmServiceIntent);
+                bindService(m_alarmServiceIntent, connection, 0);
+            } else if (m_binder.isRunning()) {
                 m_binder.stopCountdown();
-                Thread t = new Thread(() -> {
-                    try {
-                        Thread.sleep(500);//wait for the service to stop...
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    startForegroundService(alarmServiceIntent);
-                    bindService(alarmServiceIntent, connection, 0);//bind to it, but don't start countdown until the start button is pressed
-                });
-                t.start();
-                start.setEnabled(false);
-            } else {
-                m_binder.startCountdown();
             }
         });
+
+        m_alarmServiceIntent = new Intent(this, AlarmService.class);
+        connection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                m_binder = (AlarmService.MyBinder) service;
+
+                m_binder.setActivity(MainActivity.this);
+                if (m_didWeStartTheServiceRecently) {
+                    m_binder.startCountdown();
+                    m_didWeStartTheServiceRecently = false;
+                }
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                m_binder = null;
+                MainActivity.this.stopCountdown(m_myAlarmInfo.getLongInterval());
+            }
+        };
 
         progressBar.setMin(0);
 
@@ -106,6 +116,9 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void afterTextChanged(Editable s) {
+                if (m_myAlarmInfo.isRunning()) {
+                    return;//don't update the text if we are running, as the service is updating it automatically every second(as a result of a countdown)
+                }
                 int longInterval = -1;
                 try {
                     longInterval = Integer.parseInt(s.toString());
@@ -149,24 +162,15 @@ public class MainActivity extends AppCompatActivity {
         m_myAlarmInfo.load(preferences);
         m_myTheme.load(preferences);
 
-        Intent alarmServiceIntent = new Intent(MainActivity.this, AlarmService.class);
-        startForegroundService(alarmServiceIntent);//start the service, so it doesn't get killed if we lave the activity
-        connection = new ServiceConnection() {
-            @Override
-            public void onServiceConnected(ComponentName name, IBinder service) {
-                m_binder = (AlarmService.MyBinder) service;
-
-                m_binder.setActivity(MainActivity.this);
-                start.setEnabled(true);
+        if (m_binder != null) {
+            AlarmInfo ai = m_binder.getInfo();
+            if (ai != null) {
+                m_myAlarmInfo = ai;
             }
+            m_binder.setActivity(this);
+        }
 
-            @Override
-            public void onServiceDisconnected(ComponentName name) {
-                m_binder = null;
-
-            }
-        };
-        bindService(alarmServiceIntent, connection, 0);//bind to it, but don't start countdown until the start button is pressed
+        bindService(m_alarmServiceIntent, connection, 0);//bind to it, but don't start countdown until the start button is pressed
 
         seconds.setText(String.valueOf(m_myAlarmInfo.getLongInterval() / 1000));
         //loop trough the options of our adapter and set the loaded option to the closest option available

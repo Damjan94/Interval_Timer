@@ -22,6 +22,8 @@ public class AlarmInfo implements IRingtoneReceiver {
     private int m_shortInterval;
     private int m_longInterval;
 
+    private boolean m_isRunning = false;
+
     private Uri m_shortRingtoneID;
     private Uri m_longRingtoneID;
 
@@ -77,6 +79,13 @@ public class AlarmInfo implements IRingtoneReceiver {
         this.m_longRingtoneID = longRingtoneID;
     }
 
+    public void setIsRunning(boolean isRunning) {
+        m_isRunning = isRunning;
+    }
+
+    public boolean isRunning() {
+        return m_isRunning;
+    }
 
     @Override
     public void ringtoneSelected(Uri ringtoneId, String ringtoneType) {

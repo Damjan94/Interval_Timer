@@ -34,7 +34,9 @@ public class AlarmService extends Service {
         PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                 "IntervalTimer::CountdownLock");
 
-        wakeLock.acquire();
+        m_alarmInfo.setIsRunning(true);
+        wakeLock.acquire();//if we can't acquire the wakelock, we'll be useless anyway
+        // (android goes to doze mode after a few minutes of the screen being off)
         while (m_isRunning) {
             long nowTime = System.currentTimeMillis();
             long sleepTime = Long.MAX_VALUE;
@@ -60,6 +62,7 @@ public class AlarmService extends Service {
             m_activity.stopCountdown(m_checks.get(2).m_intervalTime);
         }
         wakeLock.release();
+        m_alarmInfo.setIsRunning(false);
         stopSelf();
     });
 
@@ -157,6 +160,7 @@ public class AlarmService extends Service {
         setAlarmInfo(activity.getAlarmInfo());
         if (m_isRunning) {
             m_activity.startCountdown(m_checks.get(2).m_intervalTime);
+            m_thread.interrupt();
         }
     }
 
@@ -190,6 +194,10 @@ public class AlarmService extends Service {
 
         public void stopCountdown() {
             m_alarm.m_isRunning = false;
+        }
+
+        public AlarmInfo getInfo() {
+            return m_alarm.m_alarmInfo;
         }
 
         public boolean isRunning() {
