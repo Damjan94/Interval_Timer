@@ -1,21 +1,21 @@
 package com.example.intervaltimer
 
 import android.content.Intent
-import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -26,16 +26,24 @@ import com.example.intervaltimer.layout.PickColors
 val timeLonger = listOf(30, 60, 90, 120, 150, 180)
 val timeShorter = listOf(10, 20, 30)
 
-val getTimeLongerNotification = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakeVideo, onResult = {})
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             var showColorPicker by remember {mutableStateOf(false)}
+            val getTimeLongerNotification = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult(),
+                onResult = {
+                    val data = it.data
+                    if(data != null) {
+                        val bundle = data.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+                        Log.e("Result", "we got $bundle")
+                    }
+                })
+
             Column{
                 DropDownList(list = timeLonger, "Select the longer interval")
                 DropDownList(list = timeShorter, "Select the shorter interval")
-                Button({lunchRingtonePicker()}) {
+                Button({lunchRingtonePicker(getTimeLongerNotification)}) {
                     Text("Start")
                 }
                 Icon( painter = painterResource(R.drawable.ic_av_timer_black_24dp),
@@ -53,11 +61,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun lunchRingtonePicker() {
+    private fun lunchRingtonePicker(launcher: ManagedActivityResultLauncher<Intent, ActivityResult>) {
         val intent = Intent()
         intent.action = RingtoneManager.ACTION_RINGTONE_PICKER
         intent.putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
-        startActivityForResult(intent)
+        launcher.launch(intent)
     }
 }
 
