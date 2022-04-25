@@ -28,7 +28,7 @@ public class AlarmService extends Service {
     private Ringtone m_shortRingtone = null;
     private Ringtone m_longRingtone = null;
     private AlarmInfo m_alarmInfo = null;
-    private MainActivity m_activity = null;
+    private MainActivityLayouts m_activity = null;
     private Thread m_thread = new Thread(() -> {
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
@@ -59,7 +59,7 @@ public class AlarmService extends Service {
             }
         }
         if (m_activity != null) {
-            m_activity.stopCountdown(m_checks.get(2).m_intervalTime);
+            //m_activity.stopCountdown(m_checks.get(2).m_intervalTime);
         }
         wakeLock.release();
         m_alarmInfo.setIsRunning(false);
@@ -113,7 +113,7 @@ public class AlarmService extends Service {
             @Override
             public void run() {
                 if (m_activity != null) {
-                    m_activity.update(m_checks.get(2).getSecondsUntilFinished());
+                    //m_activity.update(m_checks.get(2).getSecondsUntilFinished());
                 }
             }
         });
@@ -134,7 +134,7 @@ public class AlarmService extends Service {
                     m_longRingtone.play();
                 }
                 if (m_activity != null) {
-                    m_activity.finishedIteration(this.m_iterationCount);
+                    //m_activity.finishedIteration(this.m_iterationCount);
                 }
             }
         });
@@ -148,18 +148,18 @@ public class AlarmService extends Service {
 
         }
         if (m_activity != null) {
-            m_activity.startCountdown(m_alarmInfo.getLongInterval());
+            //m_activity.startCountdown(m_alarmInfo.getLongInterval());
         }
     }
 
-    void setActivity(MainActivity activity) {
+    void setActivity(MainActivityLayouts activity) {
         m_activity = activity;
         if (m_activity == null) {
             return;
         }
-        setAlarmInfo(activity.getAlarmInfo());
+        //setAlarmInfo(activity.getAlarmInfo());
         if (m_isRunning) {
-            m_activity.startCountdown(m_checks.get(2).m_intervalTime);
+            //m_activity.startCountdown(m_checks.get(2).m_intervalTime);
             m_thread.interrupt();
         }
     }
@@ -184,7 +184,7 @@ public class AlarmService extends Service {
             m_alarm = alarmService;
         }
 
-        public void setActivity(MainActivity activity) {
+        public void setActivity(MainActivityLayouts activity) {
             m_alarm.setActivity(activity);
         }
 

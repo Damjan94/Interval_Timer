@@ -19,8 +19,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
-import top.defaults.colorpicker.ColorPickerView;
-
 public class DynamicTheme implements IColorChanged {
 
     private static final String BACKGROUND_COLOR_KEY = "background_color";
@@ -32,21 +30,21 @@ public class DynamicTheme implements IColorChanged {
 
     private HashMap<ViewParent, LinkedList<View>> m_viewMap;
 
-    DynamicTheme(MainActivity activity, Window window) {
+    DynamicTheme(MainActivityLayouts activity, Window window) {
 
         m_viewMap = new HashMap<>();
 
         m_colors = new DynamicTheme.Colors();
 
         TypedValue typedValue = new TypedValue();
-        Resources.Theme theme = activity.getTheme();
-        theme.resolveAttribute(R.attr.colorPrimaryDark, typedValue, true);
+        //Resources.Theme theme = activity.getTheme();
+        //theme.resolveAttribute(R.attr.colorPrimaryDark, typedValue, true);
         m_colors.background = Color.valueOf(typedValue.data);
 
-        theme.resolveAttribute(R.attr.colorPrimaryDark, typedValue, true);
+        //theme.resolveAttribute(R.attr.colorPrimaryDark, typedValue, true);
         m_colors.foreground = Color.valueOf(typedValue.data);
 
-        theme.resolveAttribute(R.attr.colorPrimary, typedValue, true);
+        //theme.resolveAttribute(R.attr.colorPrimary, typedValue, true);
         m_colors.text = Color.valueOf(typedValue.data);
 
         m_window = window;
@@ -60,9 +58,6 @@ public class DynamicTheme implements IColorChanged {
                 continue;
             }
             coloredView.add(child);
-            if (child instanceof ColorPickerView) {
-                continue; // as a special case, we don't want to colorize the color picker
-            }
 
             if (child instanceof ViewGroup) {
                 populateViews((ViewGroup) child, coloredView);

@@ -9,67 +9,29 @@ import android.database.Cursor;
 import android.media.RingtoneManager;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.ComponentActivity;
 
-import com.example.intervaltimer.spinner.IntervalSpinner;
-import com.example.intervaltimer.spinner.IntervalSpinnerAdapter;
-
-import java.util.Map;
-import java.util.TreeMap;
-
-public class MainActivity extends AppCompatActivity {
-
-    private TextView iterationCount;
-    private ProgressBar progressBar;
-    private EditText seconds;
-    private Button start;
-
-    private IntervalSpinner m_notificationInterval;
-
-    private DynamicTheme m_myTheme;
+public class MainActivityLayouts {
     private AlarmInfo m_myAlarmInfo;
 
     private AlarmService.MyBinder m_binder;
     private ServiceConnection connection;
     private Intent m_alarmServiceIntent;
 
-    private boolean m_didWeStartTheServiceRecently = false;
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        iterationCount = findViewById(R.id.iteration_number);
-        start = findViewById(R.id.start_button);
-        seconds = findViewById(R.id.seconds_text);
-        progressBar = findViewById(R.id.progress_bar);
-        m_notificationInterval = findViewById(R.id.notification_interval_spinner);
-        start.setOnClickListener((view) -> {
-            if (m_binder == null) {
-                m_didWeStartTheServiceRecently = true;
-                startForegroundService(m_alarmServiceIntent);
-                bindService(m_alarmServiceIntent, connection, 0);
-            } else if (m_binder.isRunning()) {
-                m_binder.stopCountdown();
-            }
-        });
+    public MainActivityLayouts(ComponentActivity mainActivity) {
+        m_alarmServiceIntent = new Intent(mainActivity, AlarmService.class);
+    }
 
-        m_alarmServiceIntent = new Intent(this, AlarmService.class);
+    private boolean m_didWeStartTheServiceRecently = false;
+    protected void onCreate(Bundle savedInstanceState) {
+
         connection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
                 m_binder = (AlarmService.MyBinder) service;
 
-                m_binder.setActivity(MainActivity.this);
+                m_binder.setActivity(MainActivityLayouts.this);
                 if (m_didWeStartTheServiceRecently) {
                     m_binder.startCountdown();
                     m_didWeStartTheServiceRecently = false;
@@ -79,63 +41,14 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onServiceDisconnected(ComponentName name) {
                 m_binder = null;
-                MainActivity.this.stopCountdown(m_myAlarmInfo.getLongInterval());
+                //MainActivityLayouts.this.stopCountdown(m_myAlarmInfo.getLongInterval());
             }
         };
-
-        progressBar.setMin(0);
-
-        m_myTheme = new DynamicTheme(this, getWindow());
-        m_myTheme.apply((ViewGroup) findViewById(R.id.linear_layout).getParent());
-
         m_myAlarmInfo = new AlarmInfo();
 
-        ImageView timerImage = findViewById(R.id.timer_image);
 
-        timerImage.setOnLongClickListener((view) -> {
-            final FragmentColorPicker fragmentColorPicker = new FragmentColorPicker(m_myTheme);
-            getSupportFragmentManager().beginTransaction().add(fragmentColorPicker, "Color picker").commit();
-            return true; // we're consuming this click
-        });
-
-        IntervalSpinnerAdapter adapter = new IntervalSpinnerAdapter(m_myTheme, m_myAlarmInfo);
-        m_notificationInterval.setAdapter(adapter);
-        m_notificationInterval.setSelection(0);
-        m_notificationInterval.setOnItemSelectedListener(adapter);
-
-        seconds.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (m_myAlarmInfo.isRunning()) {
-                    return;//don't update the text if we are running, as the service is updating it automatically every second(as a result of a countdown)
-                }
-                int longInterval = -1;
-                try {
-                    longInterval = Integer.parseInt(s.toString());
-                } catch (NumberFormatException e) {
-                    seconds.requestFocus();
-                }
-                if (longInterval > 0) {
-                    m_myAlarmInfo.setLongInterval(longInterval * 1000);
-                }
-            }
-        });
-
-        setFragmentNotificationPicker(m_notificationInterval, m_myAlarmInfo, AlarmInfo.RINGTONE_SHORT_INTERVAL_KEY);
-
-        setFragmentNotificationPicker(seconds, m_myAlarmInfo, AlarmInfo.RINGTONE_LONG_INTERVAL_KEY);
     }
-
+/*
     private void setFragmentNotificationPicker(View v, IRingtoneReceiver receiver, String ringtoneType) {
         v.setOnLongClickListener((view) -> {
             RingtoneManager manager = new RingtoneManager(this);
@@ -153,14 +66,9 @@ public class MainActivity extends AppCompatActivity {
             return true; // we're consuming this click
         });
     }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
+*/
+    protected void onResume(SharedPreferences preferences) {
         m_myAlarmInfo.load(preferences);
-        m_myTheme.load(preferences);
 
         if (m_binder != null) {
             AlarmInfo ai = m_binder.getInfo();
@@ -170,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
             m_binder.setActivity(this);
         }
 
+        /*
         bindService(m_alarmServiceIntent, connection, 0);//bind to it, but don't start countdown until the start button is pressed
 
         seconds.setText(String.valueOf(m_myAlarmInfo.getLongInterval() / 1000));
@@ -183,24 +92,22 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         m_notificationInterval.setSelection(selection);
-    }
+    */}
 
-    @Override
     protected void onPause() {
-        super.onPause();
         if (m_binder != null) {
             m_binder.setActivity(null);
         }
 
-
+/*
         SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor sharedPreferencesEditor = preferences.edit();
         m_myTheme.save(sharedPreferencesEditor);
         m_myAlarmInfo.save(sharedPreferencesEditor);
         sharedPreferencesEditor.apply();
-
+*/
     }
-
+/*
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -254,5 +161,5 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             iterationCount.setText(str);
         });
-    }
+    }*/
 }

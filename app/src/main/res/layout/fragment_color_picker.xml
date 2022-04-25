@@ -7,13 +7,6 @@
     android:orientation="vertical"
     android:padding="10dp">
 
-    <top.defaults.colorpicker.ColorPickerView
-        android:id="@+id/color_picker"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:enableAlpha="true"
-        app:enableBrightness="true" />
-
     <Button
         android:id="@+id/background_color_button"
         android:layout_width="match_parent"

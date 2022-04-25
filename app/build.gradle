@@ -1,5 +1,7 @@
-apply plugin: 'com.android.application'
-
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
 android {
     compileSdkVersion 32
     defaultConfig {
@@ -9,6 +11,9 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    buildFeatures {
+        compose true
     }
     buildTypes {
         release {
@@ -21,17 +26,29 @@ android {
         targetCompatibility = 1.8
     }
     namespace 'com.example.intervaltimer'
-}
-preBuild {
-    doFirst {
-        JavaCompile jc = android.applicationVariants.find { it.name == 'debug' }.javaCompile
-        jc.options.compilerArgs = ["-Xlint:unchecked", "-Xlint:deprecation"]
+    kotlinOptions {
+        jvmTarget = "1.8"
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.1.1'
+    }
+
 }
+
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    //implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'androidx.core:core-ktx:1.7.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.1'
+    implementation 'androidx.activity:activity-compose:1.4.0'
+    implementation "androidx.compose.ui:ui:$compose_ui_version"
+    implementation "androidx.compose.ui:ui-tooling-preview:$compose_ui_version"
+    implementation 'androidx.compose.material:material:1.1.1'
+    debugImplementation "androidx.compose.ui:ui-tooling:$compose_ui_version"
+    debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_ui_version"
+
+
     implementation 'androidx.appcompat:appcompat:1.4.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.3'
-    //implementation 'com.godaddy.android.colorpicker:compose-color-picker-android:0.4.2'
+    implementation 'com.godaddy.android.colorpicker:compose-color-picker-android:0.4.2'
     implementation "androidx.preference:preference:1.2.0"
 }
