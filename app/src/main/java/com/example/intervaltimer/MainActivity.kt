@@ -1,27 +1,22 @@
 package com.example.intervaltimer
 
-import android.content.Intent
-import android.media.RingtoneManager
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import com.example.intervaltimer.layout.PickColors
+import com.example.intervaltimer.layout.*
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 val timeLonger = listOf(30, 60, 90, 120, 150, 180)
 val timeShorter = listOf(10, 20, 30)
@@ -29,73 +24,36 @@ val timeShorter = listOf(10, 20, 30)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val colors = Colors()
+
         setContent {
-            var showColorPicker by remember {mutableStateOf(false)}
-            val getTimeLongerNotification = rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult(),
-                onResult = {
-                    val data = it.data
-                    if(data != null) {
-                        val bundle = data.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
-                        Log.e("Result", "we got $bundle")
-                    }
-                })
-
-            Column{
-                DropDownList(list = timeLonger, "Select the longer interval")
-                DropDownList(list = timeShorter, "Select the shorter interval")
-                Button({lunchRingtonePicker(getTimeLongerNotification)}) {
-                    Text("Start")
+            val systemUiController = rememberSystemUiController()
+            val ringtonePicker = remember {
+                RingtonePicker {
+                    Log.e("Ringtone Picker", it.toString())
                 }
-                Icon( painter = painterResource(R.drawable.ic_av_timer_black_24dp),
-                    contentDescription = "Change colors",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable { showColorPicker = true })
-
-                if(showColorPicker) {
-                    Dialog(onDismissRequest = {showColorPicker = false}) {
-                        PickColors()
-                    }
+            }
+            val colorPicker = remember {
+                ColorPicker {
+                    colors.background.value = it
+                    systemUiController.setSystemBarsColor(it, it.luminance() > 0.5f)
                 }
+            }
+            Column(Modifier.background(colors.background.value)){
+                    DropDownList(list = timeLonger, "Select the longer interval")
+                    DropDownList(list = timeShorter, "Select the shorter interval")
+                    Button({ringtonePicker.showPickerMenu.value = true}) {
+                        Text("Start")
+                    }
+                    Icon( painter = painterResource(R.drawable.ic_av_timer_black_24dp),
+                        contentDescription = "Change colors",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable { colorPicker.showColorPicker.value = true })
+                    DisplayColorPicker(colorPicker)
+                    DisplayRingtonePicker(ringtonePicker)
             }
         }
     }
 
-    private fun lunchRingtonePicker(launcher: ManagedActivityResultLauncher<Intent, ActivityResult>) {
-        val intent = Intent()
-        intent.action = RingtoneManager.ACTION_RINGTONE_PICKER
-        intent.putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
-        launcher.launch(intent)
-    }
-}
-
-@Composable
-fun DropDownList(list: List<Int>, description: String) {
-    var isExpanded by remember {mutableStateOf(false)}
-    var selectedTime: Int by remember {mutableStateOf(0)}
-    val labelFontSize = 30.sp
-    Column{
-        Text(description, fontSize = labelFontSize)
-        Text(
-            text = selectedTime.toString(),
-            fontSize = labelFontSize,
-            modifier = Modifier.clickable(onClick = { isExpanded = true })
-        )
-        DropdownMenu(expanded = isExpanded, onDismissRequest = { isExpanded = false }) {
-            list.forEach {
-                DropdownMenuItem(onClick = {
-                    selectedTime = it
-                    isExpanded = false
-                }) {
-                    Text(it.toString())
-                }
-            }
-        }
-    }
-}
-
-@Composable
-@Preview
-fun DropDownListPreview() {
-    DropDownList(list = listOf(10, 20, 30, 40, 50), "Test label")
 }
